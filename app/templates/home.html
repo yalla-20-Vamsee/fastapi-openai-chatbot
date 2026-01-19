@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chatbot</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .chat { border: 1px solid #ccc; padding: 10px; max-width: 600px; margin: 10px 0; }
+        .user { color: blue; }
+        .bot { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Chatbot (Form)</h1>
+    <form action="/" method="post">
+        <input type="text" name="user_input" placeholder="Type something..." required>
+        <button type="submit">Send</button>
+    </form>
+
+    <div class="chat-log">
+        {% for message in chat_responses %}
+            <div class="chat">
+                {% if loop.index0 % 2 == 0 %}
+                    <span class="user">You: {{ message }}</span>
+                {% else %}
+                    <span class="bot">Bot: {{ message }}</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <hr>
+    <a href="/image">Go to Image Generator</a> |
+    <a href="/resume">Go to Resume Analyzer</a>
+</body>
+</html>

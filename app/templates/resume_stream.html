@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Streaming Resume Analyzer</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        textarea { width: 100%; max-width: 600px; margin-bottom: 10px; }
+        pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; word-wrap: break-word; }
+        button { padding: 5px 15px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Streaming Resume Analyzer</h1>
+    <textarea id="resumeText" rows="10" placeholder="Paste your resume text here..."></textarea><br>
+    <button onclick="sendResume()">Analyze Resume</button>
+
+    <h2>Streaming Analysis:</h2>
+    <pre id="analysis"></pre>
+
+    <script>
+        const ws = new WebSocket("ws://127.0.0.1:8000/ws/resume");
+        const analysisEl = document.getElementById("analysis");
+
+        ws.onmessage = (event) => {
+            analysisEl.textContent += event.data;
+        };
+
+        function sendResume() {
+            const text = document.getElementById("resumeText").value.trim();
+            if (!text) {
+                alert("Please enter your resume text.");
+                return;
+            }
+            analysisEl.textContent = "";
+            ws.send(text);
+        }
+
+        ws.onclose = () => console.log("WebSocket closed");
+        ws.onerror = (err) => console.error("WebSocket error:", err);
+    </script>
+
+    <a href="/resume">Back to Resume Upload</a><br>
+    <a href="/">Back to Home</a>
+</body>
+</html>

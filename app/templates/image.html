@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Generator</title>
+</head>
+<body>
+    <h1>AI Image Generator</h1>
+
+    <form action="/image" method="post">
+        <input type="text" name="user_input" placeholder="Describe an image" required>
+        <button type="submit">Generate Image</button>
+    </form>
+
+    {% if image_url %}
+        <h2>Generated Image</h2>
+        <img src="{{ image_url }}" alt="Generated Image" width="300">
+    {% endif %}
+
+    <br><br>
+    <a href="/">⬅ Back to Chat</a>
+</body>
+</html>

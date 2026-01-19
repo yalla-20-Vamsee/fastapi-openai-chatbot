@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resume Analyzer</title>
+</head>
+<body>
+<h1>Resume Analyzer</h1>
+<form action="/resume" enctype="multipart/form-data" method="post">
+  <input type="file" name="file" accept=".pdf,.txt" required>
+  <button type="submit">Analyze Resume</button>
+</form>
+{% if analysis %}
+<h2>Analysis for {{ filename }}:</h2>
+<pre>{{ analysis }}</pre>
+{% endif %}
+<a href="/resume_stream">Try Streaming Resume Analysis</a> | <a href="/">Back to Home</a>
+</body>
+</html>
