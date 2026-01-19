@@ -48,28 +48,20 @@ async def resume_stream_ws(websocket: WebSocket):
     await websocket.accept()
     while True:
         try:
-            resume_text = await websocket.receive_text()
-            prompt = f"""
-Analyze this resume and return in bullet points:
-1. Key skills
-2. Suggested interview questions
-
-Resume Content:
-{resume_text}
-"""
+            resume_text = await websocket.receive_text()  # placeholder for file text
+            # Call OpenAI streaming
             response = openai.chat.completions.create(
                 model="gpt-4",
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": f"Analyze resume: {resume_text}"}],
                 temperature=0.6,
                 stream=True
             )
 
-            analysis_text = ""
             for chunk in response:
                 delta = getattr(chunk.choices[0].delta, "content", None)
                 if delta:
-                    analysis_text += delta
                     await websocket.send_text(delta)
+
         except Exception as e:
             await websocket.send_text(f"Error: {str(e)}")
             break

@@ -1,18 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Resume Analyzer</title>
-</head>
-<body>
-<h1>Resume Analyzer</h1>
-<form action="/resume" enctype="multipart/form-data" method="post">
-  <input type="file" name="file" accept=".pdf,.txt" required>
-  <button type="submit">Analyze Resume</button>
+{% extends "layout.html" %}
+{% block content %}
+<h1 class="mb-4">Resume Analyzer</h1>
+
+<form action="/resume" enctype="multipart/form-data" method="post" class="mb-3">
+    <input type="file" name="file" class="form-control mb-2" accept=".pdf,.txt" required>
+    <button type="submit" class="btn btn-primary">Analyze Resume</button>
 </form>
+
 {% if analysis %}
-<h2>Analysis for {{ filename }}:</h2>
-<pre>{{ analysis }}</pre>
+<div class="card mt-3">
+    <div class="card-header bg-dark text-white">
+        Analysis for {{ filename }}:
+    </div>
+    <div class="card-body">
+        <pre>{{ analysis }}</pre>
+    </div>
+</div>
 {% endif %}
-<a href="/resume_stream">Try Streaming Resume Analysis</a> | <a href="/">Back to Home</a>
-</body>
-</html>
+<a href="/resume_stream" class="btn btn-link mt-3">Try Streaming Resume Analysis</a>
+{% endblock %}

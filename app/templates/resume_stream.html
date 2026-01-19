@@ -1,45 +1,65 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Streaming Resume Analyzer</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        textarea { width: 100%; max-width: 600px; margin-bottom: 10px; }
-        pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; word-wrap: break-word; }
-        button { padding: 5px 15px; margin-bottom: 20px; }
-    </style>
-</head>
-<body>
-    <h1>Streaming Resume Analyzer</h1>
-    <textarea id="resumeText" rows="10" placeholder="Paste your resume text here..."></textarea><br>
-    <button onclick="sendResume()">Analyze Resume</button>
+{% extends "layout.html" %}
 
-    <h2>Streaming Analysis:</h2>
-    <pre id="analysis"></pre>
+{% block content %}
+<h1 class="mb-4">Streaming Resume Analyzer</h1>
 
-    <script>
-        const ws = new WebSocket("ws://127.0.0.1:8000/ws/resume");
-        const analysisEl = document.getElementById("analysis");
+<form id="resumeForm" enctype="multipart/form-data" class="mb-3">
+    <input type="file" id="resumeFile" class="form-control mb-2" accept=".pdf,.txt" required>
+    <button type="submit" class="btn btn-primary">Analyze Resume</button>
+</form>
 
-        ws.onmessage = (event) => {
-            analysisEl.textContent += event.data;
-        };
+<div id="streamingOutput" class="border p-3 rounded bg-light" style="min-height: 200px; white-space: pre-wrap; overflow-y: auto;">
+    <!-- Live streamed AI output will appear here -->
+</div>
 
-        function sendResume() {
-            const text = document.getElementById("resumeText").value.trim();
-            if (!text) {
-                alert("Please enter your resume text.");
-                return;
-            }
-            analysisEl.textContent = "";
-            ws.send(text);
+<div id="status" class="mt-2 text-muted"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const form = document.getElementById("resumeForm");
+const output = document.getElementById("streamingOutput");
+const status = document.getElementById("status");
+
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const fileInput = document.getElementById("resumeFile");
+    if (!fileInput.files.length) return alert("Please select a file.");
+
+    const file = fileInput.files[0];
+
+    // Read the file as text (PDF requires server-side extraction)
+    const formData = new FormData();
+    formData.append("file", file);
+
+    output.innerHTML = "";
+    status.textContent = "Connecting to server...";
+
+    // Create a WebSocket connection
+    const ws = new WebSocket("ws://" + window.location.host + "/ws/resume");
+
+    ws.onopen = () => {
+        status.textContent = "Streaming analysis...";
+        // Send file content as text (for PDFs, server will extract)
+        ws.send(file.name.endsWith(".pdf") ? "PDF uploaded" : fileInput.value);
+    };
+
+    ws.onmessage = (event) => {
+        const data = event.data;
+        if (data.startsWith("Error:")) {
+            status.textContent = data;
+            ws.close();
+        } else {
+            output.textContent += data;
+            output.scrollTop = output.scrollHeight;
         }
+    };
 
-        ws.onclose = () => console.log("WebSocket closed");
-        ws.onerror = (err) => console.error("WebSocket error:", err);
-    </script>
-
-    <a href="/resume">Back to Resume Upload</a><br>
-    <a href="/">Back to Home</a>
-</body>
-</html>
+    ws.onclose = () => {
+        status.textContent = "Analysis complete.";
+    };
+});
+</script>
+{% endblock %}
