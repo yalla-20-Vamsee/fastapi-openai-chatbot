@@ -300,9 +300,9 @@ MIT License — feel free to use this project for personal or commercial purpose
 
 ## 👨‍💻 Author
 
-**Vamsee Yalla**
-- GitHub: [@yalla-20-Vamsee](https://github.com/yalla-20-Vamsee)
-- LinkedIn: [Vamsee Yalla](https://linkedin.com/in/vamsee-yalla)
+**Satya Krishna Vamsee Yalla**
+- GitHub: (https://github.com/yalla-20-Vamsee)
+- LinkedIn: https://www.linkedin.com/in/ysk-vamsee/
 
 ---
 
