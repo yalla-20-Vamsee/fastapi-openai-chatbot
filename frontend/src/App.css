@@ -126,3 +126,59 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .error-toast { background: rgba(220,60,60,0.15); border: 1px solid rgba(220,60,60,0.4); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #ff8080; font-family: var(--mono); margin-bottom: 10px; }
 
 @media (max-width: 700px) { .app { grid-template-columns: 1fr; } .sidebar { display: none; } }
+
+/* AUTH PAGE */
+.auth-page { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+.auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
+.auth-logo { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 8px; }
+.auth-title { font-size: 22px; font-weight: 700; text-align: center; }
+.auth-sub { font-size: 13px; color: var(--muted); text-align: center; margin-top: -8px; }
+.auth-input { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: var(--font); font-size: 14px; padding: 12px; width: 100%; outline: none; transition: border-color 0.2s; }
+.auth-input:focus { border-color: var(--accent); }
+.auth-btn { background: linear-gradient(135deg, var(--accent), #5a4fd4); border: none; border-radius: 10px; color: #fff; font-family: var(--font); font-size: 14px; font-weight: 600; padding: 13px; cursor: pointer; transition: opacity 0.2s; }
+.auth-btn:hover { opacity: 0.9; }
+.auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.auth-switch { font-size: 13px; color: var(--muted); text-align: center; }
+.auth-switch button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 13px; font-family: var(--font); }
+.auth-loading { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); color: var(--accent); font-size: 24px; font-family: var(--font); }
+.success-toast { background: rgba(61,214,140,0.15); border: 1px solid rgba(61,214,140,0.4); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--accent3); font-family: var(--mono); }
+.user-info { display: flex; align-items: center; justify-content: space-between; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
+.user-email { font-size: 11px; color: var(--muted); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+.logout-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 11px; font-family: var(--font); padding: 4px 8px; cursor: pointer; }
+.logout-btn:hover { color: var(--accent2); border-color: var(--accent2); }
+
+/* UPLOAD */
+.upload-area { display: flex; flex-direction: column; gap: 6px; }
+.upload-btn { background: var(--panel); border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); font-family: var(--font); font-size: 12px; padding: 10px; cursor: pointer; transition: all 0.2s; width: 100%; }
+.upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+.upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.doc-item { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 11px; color: var(--accent3); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* SESSION DELETE */
+.session-delete {
+  margin-left: auto; background: none; border: none;
+  color: var(--muted); cursor: pointer; font-size: 10px;
+  padding: 2px 5px; border-radius: 4px; opacity: 0;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.session-item:hover .session-delete { opacity: 1; }
+.session-delete:hover { color: #ff6b6b; background: rgba(255,107,107,0.1); }
+
+/* ATTACH BUTTON IN INPUT BAR */
+.attach-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 18px; padding: 4px 6px; border-radius: 8px;
+  color: var(--muted); transition: all 0.2s; flex-shrink: 0;
+}
+.attach-btn:hover { color: var(--accent); background: rgba(124,106,247,0.1); }
+.attach-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* DOCUMENT CHIPS ABOVE INPUT */
+.doc-chips {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+}
+.doc-chip {
+  background: rgba(124,106,247,0.15); border: 1px solid rgba(124,106,247,0.3);
+  border-radius: 20px; padding: 4px 12px; font-size: 11px;
+  color: var(--accent); font-family: var(--mono);
+}

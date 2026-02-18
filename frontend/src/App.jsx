@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import "./App.css";
 import ReactMarkdown from "react-markdown";
+import { supabase } from "./supabase";
 
 const API_BASE = "http://localhost:8000";
 
@@ -21,34 +22,78 @@ const QUICK_PROMPTS = [
   "Explain quantum computing simply",
   "Write a Python web scraper",
   "Give me a bedtime story",
-  "Analyze Tesla's business model",
+  "Analyze Tesla business model",
 ];
 
 function formatTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function renderContent(text) {
-  const parts = text.split(/(```[\s\S]*?```)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("```")) {
-      const code = part.replace(/^```\w*\n?/, "").replace(/```$/, "");
-      return <pre key={i}>{code}</pre>;
+// ── Auth Page ────────────────────────────────────────────────────────────────
+function AuthPage({ onAuth }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async () => {
+    setError(""); setMessage(""); setLoading(true);
+    try {
+      if (isLogin) {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        onAuth(data.user);
+      } else {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setMessage("Account created! Please check your email to confirm, then log in.");
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
-    const inline = part.split(/(`[^`]+`)/g);
-    return (
-      <span key={i}>
-        {inline.map((s, j) =>
-          s.startsWith("`") && s.endsWith("`")
-            ? <code key={j}>{s.slice(1, -1)}</code>
-            : s
-        )}
-      </span>
-    );
-  });
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">
+          <div className="logo-icon">✦</div>
+          <span className="logo-text">NexusAI</span>
+          <span className="logo-badge">v3.0</span>
+        </div>
+        <h2 className="auth-title">{isLogin ? "Welcome back" : "Create account"}</h2>
+        <p className="auth-sub">{isLogin ? "Sign in to your account" : "Sign up for free"}</p>
+
+        {error && <div className="error-toast">⚠ {error}</div>}
+        {message && <div className="success-toast">✅ {message}</div>}
+
+        <input className="auth-input" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input className="auth-input" type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+
+        <button className="auth-btn" onClick={handleSubmit} disabled={loading}>
+          {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
+        </button>
+
+        <p className="auth-switch">
+          {isLogin ? "Don\'t have an account?" : "Already have an account?"}
+          <button onClick={() => { setIsLogin(s => !s); setError(""); setMessage(""); }}>
+            {isLogin ? " Sign Up" : " Sign In"}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
 }
 
+// ── Main App ─────────────────────────────────────────────────────────────────
 export default function ChatbotApp() {
+  const [user, setUser]             = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [apiKey, setApiKey]         = useState("");
   const [showKey, setShowKey]       = useState(false);
   const [model, setModel]           = useState("gpt-4o-mini");
@@ -63,38 +108,108 @@ export default function ChatbotApp() {
   const [error, setError]           = useState("");
   const [copied, setCopied]         = useState(null);
   const [msgCount, setMsgCount]     = useState(0);
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const messagesEnd = useRef(null);
+
+  // Check existing session on load
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+  }, []);
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingText]);
 
-  const newSession = useCallback(() => {
-    const sess = { id: `local-${Date.now()}`, label: `Chat ${sessions.length + 1}`, ts: Date.now() };
-    setSessions(prev => [sess, ...prev]);
-    setActiveSession(sess);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSessions([]);
     setMessages([]);
-    setMsgCount(0);
-  }, [sessions.length]);
+    setActiveSession(null);
+  };
 
-  useEffect(() => { newSession(); }, []);
+  const newSession = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(`${API_BASE}/session/new?persona=${persona}&model=${model}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const sess = { id: data.session_id, label: `Chat ${sessions.length + 1}`, ts: Date.now() };
+      setSessions(prev => [sess, ...prev]);
+      setActiveSession(sess);
+      setMessages([]);
+      setMsgCount(0);
+    } catch {
+      const sess = { id: crypto.randomUUID(), label: `Chat ${sessions.length + 1}`, ts: Date.now() };
+      setSessions(prev => [sess, ...prev]);
+      setActiveSession(sess);
+      setMessages([]);
+      setMsgCount(0);
+    }
+  }, [sessions.length, persona, model]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch(`${API_BASE}/sessions`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.sessions && data.sessions.length > 0) {
+          const loaded = data.sessions.map((s, i) => ({
+            id: s.id,
+            label: s.label || `Chat ${i + 1}`,
+            ts: new Date(s.created_at).getTime()
+          }));
+          setSessions(loaded);
+          setActiveSession(loaded[0]);
+          fetch(`${API_BASE}/session/${loaded[0].id}/history`)
+            .then(r => r.json())
+            .then(d => setMessages((d.messages || []).map(m => ({
+              role: m.role, content: m.content,
+              ts: new Date(m.created_at).getTime(), model: m.model
+            }))));
+          fetch(`${API_BASE}/documents/${loaded[0].id}`)
+            .then(r => r.json())
+            .then(d => setDocuments(d.documents || []));
+        } else {
+          newSession();
+        }
+      })
+      .catch(() => newSession());
+  }, [user]);
 
   const sendMessage = useCallback(async (text) => {
     if (!text.trim() || loading) return;
     if (!apiKey) { setError("Please enter your OpenAI API key in the sidebar."); return; }
     setError("");
     setMessages(prev => [...prev, { role: "user", content: text, ts: Date.now() }]);
+    // Auto-rename session on first message
+    const isFirstMessage = messages.length === 0;
     setInput("");
     setLoading(true);
     setStreamingText("");
     setMsgCount(c => c + 1);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const body = { message: text, session_id: activeSession?.id, model, persona, stream, api_key: apiKey };
 
       if (stream) {
         const resp = await fetch(`${API_BASE}/chat`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify(body),
         });
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
@@ -110,6 +225,15 @@ export default function ChatbotApp() {
                 setMessages(prev => [...prev, { role: "assistant", content: accumulated, ts: Date.now(), model }]);
                 setStreamingText("");
                 setMsgCount(c => c + 1);
+                if (isFirstMessage && activeSession?.id) {
+                  fetch(`${API_BASE}/session/${activeSession.id}/rename?api_key=${encodeURIComponent(apiKey)}&message=${encodeURIComponent(text)}`, { method: "POST" })
+                    .then(r => r.json())
+                    .then(d => {
+                      if (d.title) {
+                        setSessions(prev => prev.map(s => s.id === activeSession.id ? { ...s, label: d.title } : s));
+                      }
+                    });
+                }
               }
               if (json.error) setError(json.error);
             } catch {}
@@ -117,7 +241,9 @@ export default function ChatbotApp() {
         }
       } else {
         const resp = await fetch(`${API_BASE}/chat`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify(body),
         });
         const data = await resp.json();
         if (data.response) {
@@ -129,6 +255,50 @@ export default function ChatbotApp() {
       setError(e.message || "Failed to connect to backend.");
     } finally { setLoading(false); }
   }, [loading, apiKey, activeSession, model, persona, stream]);
+
+  const uploadFile = async (file) => {
+    if (!activeSession) { setError("Start a session first."); return; }
+    if (!apiKey) { setError("Enter your API key first."); return; }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("session_id", activeSession.id);
+      formData.append("api_key", apiKey);
+      const resp = await fetch(`${API_BASE}/upload`, { method: "POST", body: formData });
+      const data = await resp.json();
+      if (data.success) {
+        setDocuments(prev => [...prev, { filename: data.filename, chars: data.chars }]);
+        setError("");
+      } else { setError(data.detail || "Upload failed"); }
+    } catch (e) { setError(e.message); }
+    finally { setUploading(false); }
+  };
+
+  const deleteSession = async (e, sessionId) => {
+    e.stopPropagation();
+    try {
+      await fetch(`${API_BASE}/session/${sessionId}`, { method: "DELETE" });
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (activeSession?.id === sessionId) {
+        setMessages([]);
+        setDocuments([]);
+        setActiveSession(null);
+        const remaining = sessions.filter(s => s.id !== sessionId);
+        if (remaining.length > 0) {
+          setActiveSession(remaining[0]);
+          const res = await fetch(`${API_BASE}/session/${remaining[0].id}/history`);
+          const data = await res.json();
+          setMessages((data.messages || []).map(m => ({
+            role: m.role, content: m.content,
+            ts: new Date(m.created_at).getTime(), model: m.model
+          })));
+        } else {
+          newSession();
+        }
+      }
+    } catch (e) { setError(e.message); }
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -142,13 +312,21 @@ export default function ChatbotApp() {
 
   const personaObj = PERSONAS.find(p => p.id === persona);
 
+  if (authLoading) return <div className="auth-loading">✦ Loading...</div>;
+  if (!user) return <AuthPage onAuth={setUser} />;
+
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="logo">
           <div className="logo-icon">✦</div>
           <span className="logo-text">NexusAI</span>
-          <span className="logo-badge">v2.0</span>
+          <span className="logo-badge">v3.0</span>
+        </div>
+
+        <div className="user-info">
+          <span className="user-email">👤 {user.email}</span>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
 
         <span className="sidebar-label">API Key</span>
@@ -172,12 +350,31 @@ export default function ChatbotApp() {
 
         <button className="new-chat-btn" onClick={newSession}>+ New Chat</button>
 
+
         <span className="sidebar-label">History</span>
         <div className="session-list">
           {sessions.map(s => (
             <div key={s.id} className={`session-item ${activeSession?.id === s.id ? "active" : ""}`}
-              onClick={() => { setActiveSession(s); setMessages([]); }}>
+              onClick={async () => {
+                setActiveSession(s);
+                setMessages([]);
+                setDocuments([]);
+                try {
+                  const res = await fetch(`${API_BASE}/session/${s.id}/history`);
+                  const data = await res.json();
+                  setMessages(data.messages.map(m => ({
+                    role: m.role,
+                    content: m.content,
+                    ts: new Date(m.created_at).getTime(),
+                    model: m.model
+                  })));
+                  const docsRes = await fetch(`${API_BASE}/documents/${s.id}`);
+                  const docsData = await docsRes.json();
+                  setDocuments(docsData.documents || []);
+                } catch {}
+              }}>
               <span className="session-dot" />{s.label}
+              <button className="session-delete" onClick={(e) => deleteSession(e, s.id)}>✕</button>
             </div>
           ))}
         </div>
@@ -253,9 +450,20 @@ export default function ChatbotApp() {
 
         <div className="input-area">
           {error && <div className="error-toast">⚠ {error}</div>}
+          {documents.length > 0 && (
+            <div className="doc-chips">
+              {documents.map((d, i) => (
+                <div key={i} className="doc-chip">📄 {d.filename}</div>
+              ))}
+            </div>
+          )}
           <div className="input-box">
-            <textarea
-              placeholder="Send a message… (Shift+Enter for newline)"
+            <input ref={fileInputRef} type="file" accept=".pdf,.txt" style={{display:"none"}}
+              onChange={e => e.target.files[0] && uploadFile(e.target.files[0])} />
+            <button className="attach-btn" onClick={() => fileInputRef.current.click()} disabled={uploading} title="Upload PDF or TXT">
+              {uploading ? "⏳" : "📎"}
+            </button>
+            <textarea placeholder="Send a message… (Shift+Enter for newline)"
               value={input} rows={1}
               onChange={e => {
                 setInput(e.target.value);

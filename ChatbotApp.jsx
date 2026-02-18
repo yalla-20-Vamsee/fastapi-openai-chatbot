@@ -26,6 +26,8 @@ const QUICK_PROMPTS = [
   "Analyze Tesla's business model",
 ];
 
+
+
 function formatTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
